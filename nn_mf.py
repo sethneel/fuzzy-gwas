@@ -57,8 +57,7 @@ class Factorization(torch.nn.Module):
 
 
 # q_ids = query_matrix recovers the total loss
-# If M = LR^T-X, and if our loss fn is the MSE then the loss can be upper bounded by
-# 1/m * (||M||_F^2*1/n + 1/n^2||L||_F^2||R||_{1->2}
+
 def loss_fn_l_inf(l_mat, r_mat, q_ids, ids=None):
     if ids is None:
         approximation_loss = torch.max(torch.abs(torch.matmul(l_mat, torch.transpose(r_mat, 0, 1)) - q_ids))
@@ -67,11 +66,9 @@ def loss_fn_l_inf(l_mat, r_mat, q_ids, ids=None):
     noise_loss = torch.max(torch.norm(l_mat, dim=1))*torch.max(torch.norm(r_mat, dim=1))
     return approximation_loss + noise_loss
 
-# the total loss for an approximation LR^T is defined as
-# ||L(R^Ty + eps)-Xy||_inf = ||RL-X||_inf (max entry) + ||L||_{max row norm}||R||_{max row norm}
-# note the first is ||RL-x||_inf <= ||RL-X||_{max row norm} because y in {0,1}^n, but l2 norm would be fine.
 
-
+# If M = LR^T-X, and if our loss fn is the MSE then the loss can be upper bounded by
+# 1/m * (||M||_F^2*1/n + 1/n^2||L||_F^2||R||_{1->2}^2*privacy_blah
 def loss_fn_l_2(L, R, q_ids, ids=None, silent=True):
     m = L.shape[0]
     n_samp = q_ids.shape[0]
@@ -112,3 +109,5 @@ for t in range(epochs):
     print(f"Epoch {t+1}\n-------------------------------")
     training_loop(train_dataloader, mm_fac, loss_fn_l_2, optimizer)
 print("Done!")
+
+# TO DO: fix implementation of l2 loss fn and rerun. 

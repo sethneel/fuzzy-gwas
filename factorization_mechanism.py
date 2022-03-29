@@ -81,40 +81,45 @@ def ldp_mechanism(query_matrix, y, epsilon, delta):
 
 def generate_y(qmn):
     # generate binary y with some correlation
+    m, n = qmn.shape
     w = [np.random.normal(0,1) for _ in range(m)]
     y = np.matmul(w, qmn)
     thresh = np.mean(y)
     y = [0 if u > thresh else 1 for u in y]
+    return y
 
+def factorization_mechanism(query_matrix_mn, save=True):
+    constr_mat = create_constr_mat(query_matrix_mn)
+    prob, x_variable = create_SDP(*constr_mat)
+    m, n = query_matrix_mn.shape
+    prob.solve(solver=cvxpy.CVXOPT)
+    x_opt = x_variable.value[0:(m+n), 0:(m+n)]
+    L, R = get_matrix_decomp(x_opt, m, n, W=query_matrix_mn)
+    R_norm = np.max(np.linalg.norm(R, axis=1))
+    L_norm = np.max(np.linalg.norm(L, axis=1))
+    eta_opt = R_norm * L_norm
+    np.max(np.linalg.norm(query_matrix_mn, axis=0))
+    print('error like {} instead of {} from gaussian mechanism'.format(eta_opt/n, np.max(np.linalg.norm(query_matrix_mn, axis=0))))
+    results = {'query_matrix': query_matrix_mn, 'L': L, 'R': R, 'x_opt': x_opt, 'eta_opt': eta_opt}
+    # save results
+    if save:
+        with open('Results/sdp_results_m_{}_n_{}.pickle'.format(m, n), 'wb') as g:
+            pickle.dump(results, g, pickle.HIGHEST_PROTOCOL)
+    else:
+        return results
 
 if __name__ == "__main__":
-    # please set the path to your data directory here
-    home_dir = '/Users/sneel/'
-    data_path = home_dir + 'Dropbox/Research/Current_Projects/epi-data/Data'
-    # read in genotype data from CEU population (112 respondents, 718848 snps)
-    geno_matrix = gen_helpers.read_geno(gen_helpers.pname('CEU.geno', data_path))
-    # remove SNPs with missing data: 500k by 112
-    geno_matrix = np.ma.compress_rows(geno_matrix)
-    # test on small matrix
-    m = 500
-    n = 100
-    query_matrix = geno_matrix[0:m, 0:n]
-    with open('query_submatrix.pickle', 'wb') as f:
-        pickle.dump(query_matrix, f, pickle.HIGHEST_PROTOCOL)
-
-
-    # start here if don't want to load the data
-    with open('query_submatrix.pickle', 'rb') as f:
+    with open('Data/query_submatrix.pickle', 'rb') as f:
         # The protocol version used is detected automatically, so we do not
         # have to specify it.
         query_matrix = pickle.load(f)
 
-    m = 250
+    m = 10
     n = 100
     query_matrix_mn = query_matrix[0:m, 0:n]
     constr_mat = create_constr_mat(query_matrix_mn)
     prob, x_variable = create_SDP(*constr_mat)
-    prob.solve()
+    prob.solve(solver=cvxpy.CVXOPT)
     eta_opt = prob.value
     x_opt = x_variable.value[0:(m+n), 0:(m+n)]
     L, R = get_matrix_decomp(x_opt, m, n, W=query_matrix_mn)
