@@ -52,5 +52,5 @@ pyplot.show()
 pyplot.show()
 
 # NOTE something weird going on with LDP values not being centered.
-np.mean(np.power(output['non_private'] - output['private'], 2))
-np.mean(np.power(output['non_private'] - baseline_ldp['private'], 2))
+np.mean(torch.pow(output['non_private'] - output['private'], 2))
+np.mean(torch.pow(output['non_private'] - baseline_ldp['private'], 2))

@@ -4,18 +4,22 @@ import scipy
 import gen_helpers
 import pickle
 import numpy as np
+import torch
+
+def gaussian_mech_noise(delta_r, epsilon, delta, tensor=False):
+    if tensor:
+        return torch.sqrt(2 * torch.log(torch.tensor(1.25 / delta)) * torch.pow(delta_r, 2) / torch.pow(torch.tensor(epsilon), 2))
+    else:
+        return np.sqrt(2 * np.log(1.25 / delta) * np.power(delta_r, 2) / np.power(epsilon, 2))
 
 
 def gaussian_mechanism(L, R, y, epsilon, delta):
-
     # Gaussian Mechanism
     # R^Ty + eta
     n = len(y)
     delta_r = np.max(np.linalg.norm(R, axis=1))/n
-    sigma = np.sqrt(2*np.log(1.25/delta)*np.power(delta_r, 2)/np.power(epsilon, 2))
-    # generate noise
+    sigma = gaussian_mech_noise(delta_r, epsilon, delta)
     eta = np.random.normal(0, sigma, size=R.shape[1])
-
     # return the private and non-private correlations
     non_private = 1.0/n*np.matmul(L, np.matmul(np.transpose(R), y))
     return {'non_private': non_private, 'private': non_private + np.matmul(L, eta)}
@@ -70,7 +74,7 @@ def ldp_mechanism(query_matrix, y, epsilon, delta):
     # Q(y + eta)
     n = len(y)
     delta_r = np.max(y)
-    sigma = np.sqrt(2*np.log(1.25/delta)*np.power(delta_r, 2)/np.power(epsilon, 2))
+    sigma = gaussian_mech_noise(delta_r, epsilon, delta)
     # generate noise
     eta = np.random.normal(0, sigma, size=n)
 
