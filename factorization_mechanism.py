@@ -12,17 +12,33 @@ def gaussian_mech_noise(delta_r, epsilon, delta, tensor=False):
     else:
         return np.sqrt(2 * np.log(1.25 / delta) * np.power(delta_r, 2) / np.power(epsilon, 2))
 
+def medape(y, y_hat):
+  return np.median(np.abs(y-y_hat)/y)
 
-def gaussian_mechanism(L, R, y, epsilon, delta):
+# compute 1/n*L(R^{T}y + eta)
+def gaussian_mechanism_fac(L, R, query_matrix, y, epsilon, delta):
     # Gaussian Mechanism
     # R^Ty + eta
     n = len(y)
-    delta_r = np.max(np.linalg.norm(R, axis=1))/n
+    # sensitivity is the col norm of R^{T} hence the row norm of R
+    delta_r = np.max(np.linalg.norm(R, axis=0))/n
     sigma = gaussian_mech_noise(delta_r, epsilon, delta)
+    #print('noise scale sigma = {}'.format(sigma))
     eta = np.random.normal(0, sigma, size=R.shape[1])
     # return the private and non-private correlations
-    non_private = 1.0/n*np.matmul(L, np.matmul(np.transpose(R), y))
-    return {'non_private': non_private, 'private': non_private + np.matmul(L, eta)}
+    return {'non_private': 1.0/n*np.matmul(query_matrix, y), 'private': np.matmul(L, 1/n*np.matmul(np.transpose(R), y) + eta)}
+
+def gaussian_mech_matrix(query_matrix, y, epsilon, delta):
+   # Gaussian Mechanism
+    # R^Ty + eta
+    n = len(y)
+    # sensitivity is the col norm of R^{T} hence the row norm of R
+    delta_r = np.max(np.linalg.norm(query_matrix, axis=1))/n
+    sigma = gaussian_mech_noise(delta_r, epsilon, delta)
+    #print('noise scale sigma = {}'.format(sigma))
+    eta = np.random.normal(0, sigma, size=query_matrix.shape[0])
+    # return the private and non-private correlations
+    return {'non_private': 1.0/n*np.matmul(query_matrix, y), 'private': 1.0/n*(np.matmul(query_matrix, y)) + eta }
 
 
 def build_sparse_matrix(shape_list, non_zero_entries_list):
@@ -89,8 +105,9 @@ def generate_y(qmn):
     w = [np.random.normal(0,1) for _ in range(m)]
     y = np.matmul(w, qmn)
     thresh = np.mean(y)
-    y = [0 if u > thresh else 1 for u in y]
-    return y
+    return (1+np.sign(y-thresh))/2
+
+ 
 
 def factorization_mechanism(query_matrix_mn, save=True):
     constr_mat = create_constr_mat(query_matrix_mn)
