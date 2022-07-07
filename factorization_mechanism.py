@@ -13,7 +13,7 @@ def gaussian_mech_noise(delta_r, epsilon, delta, tensor=False):
         return np.sqrt(2 * np.log(1.25 / delta) * np.power(delta_r, 2) / np.power(epsilon, 2))
 
 def medape(y, y_hat):
-  return np.median(np.abs(y-y_hat)/y)
+  return np.round(np.nanmedian(np.abs(y-y_hat)/y),4)
 
 # compute 1/n*L(R^{T}y + eta)
 def gaussian_mechanism_fac(L, R, query_matrix, y, epsilon, delta):
